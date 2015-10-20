@@ -11,15 +11,18 @@ import tempfile
 import zipfile
 
 
-def extract_namespaces(source_path, base_namespace=''):
+def extract_namespaces(source_path, base_namespace='', depth=1):
     namespaces = set()
 
     for entry in os.listdir(source_path):
         full_path = os.path.join(source_path, entry)
         if os.path.isdir(full_path):
             new_namespace = '{0}{1}'.format(base_namespace, entry)
-            namespaces.add(new_namespace)
-            sub_namespaces = extract_namespaces(full_path, new_namespace + '.')
+            if depth > 1:
+                namespaces.add(new_namespace)
+            sub_namespaces = extract_namespaces(
+                full_path, base_namespace=new_namespace + '.', depth=depth + 1
+            )
             namespaces = namespaces.union(sub_namespaces)
 
     return namespaces
