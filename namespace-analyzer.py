@@ -129,31 +129,62 @@ def init_database(config):
     cur.close()
 
 
+err_msg = '{0} is not a valid path'
+def dir(argument):
+    if not os.path.exists(argument):
+        raise argparse.ArgumentTypeError(err_msg.format(argument))
+
+    return argument
+
+
+def file(argument):
+    path = os.path.abspath(argument)
+    if not os.path.exists(path):
+        if not os.path.exists(os.path.dirname(path)):
+            raise argparse.ArgumentTypeError(err_msg.format(argument))
+
+    return argument
+
+def executable(argument):
+    if not shutil.which(argument):
+        if not os.path.exists(argument):
+            raise argparse.ArgumentTypeError(err_msg.format(argument))
+
+    return argument
+
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description='Script to decompile, analyze, and compile a report on ' \
-                    'the usage of libraries from a directory of APKs.'
+        description='Script to unpackage, extract, and analyze a directory ' \
+                    'of APKs in order to determine the usage of namespaces.'
     )
     parser.add_argument(
         'path',
+        type=dir,
         help='Path to the directory with the APKs.'
     )
     parser.add_argument(
         '--database',
         dest='db_filename',
         default='results.sqlite',
+        metavar='PATH',
+        type=file,
         help='Name of the resulting SQLite database filename.'
     )
     parser.add_argument(
         '--dex2jar',
         dest='dex2jar_path',
         default='dex2jar',
+        metavar='PATH',
+        type=executable,
         help='Path to the `dex2jar\' executable.'
     )
     parser.add_argument(
         '--working-dir',
         dest='working_directory',
         default='/tmp',
+        metavar='PATH',
+        type=dir,
         help='Path to the working directory in which to extract and analyze ' \
              'each APK.'
     )
@@ -167,15 +198,7 @@ def parse_arguments():
 
 def main():
     config = parse_arguments()
-    if not os.path.exists(config.path):
-        print('[ERROR] APK path {0} does not exist.'.format(config.path))
-        sys.exit(1)
-    if not shutil.which(config.dex2jar_path):
-        print('[ERROR] Cannot find the `dex2jar\' executable.')
-        sys.exit(1)
-
     init_database(config)
-
     process_apks(config)
     config.db.commit()
     config.db.close()
