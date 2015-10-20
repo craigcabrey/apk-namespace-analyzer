@@ -28,8 +28,11 @@ def extract_namespaces(source_path, base_namespace=''):
 def convert_to_jar(dex2jar_path, directory):
     dex_path = os.path.join(directory, 'classes.dex')
     jar_path = os.path.join(directory, 'classes.jar')
-    # TODO: handle dex2jar failure (doesn't properly set exit code on error)
-    subprocess.check_call([dex2jar_path, '-o', jar_path, dex_path], timeout=60)
+    cmd = [dex2jar_path, '-e', '/dev/null', '-o', jar_path, dex_path]
+    output = subprocess.check_output(cmd, stderr=subprocess.STDOUT, timeout=60)
+    if b'Detail Error Information in File' in output:
+        # Workaround for dex2jar not properly setting a return code on failure
+        raise subprocess.CalledProcessError(1, cmd)
     return jar_path
 
 
@@ -45,7 +48,7 @@ def process_apk(config, apk_path):
             jar_path = convert_to_jar(config.dex2jar_path, tmp_dir)
             print('done.')
         except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
-            print('[ERROR] Failed to convert dex into jar.')
+            print('failed.\n[ERROR] Failed to convert dex into jar.')
             return []
 
         with zipfile.ZipFile(jar_path) as jar_zip:
@@ -65,7 +68,7 @@ def process_apks(config):
     current = 1
     for name in items:
         apk_path = os.path.join(config.path, name)
-        print('=> Processing {0} of {1}: '.format(current, total), end='')
+        print(':: Processing {0} of {1}: '.format(current, total), end='')
         match = apk_regex.match(name)
         if os.path.isfile(apk_path) and match:
             insert_apk(config, match)
