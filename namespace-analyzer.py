@@ -83,12 +83,13 @@ def process_apks(config):
 def insert_namespaces(config, apk_id, namespaces):
     cur = config.db.cursor()
 
+    # TODO: use executemany instead of looping with execute
     for namespace in namespaces:
         cur.execute('''
         INSERT INTO namespaces
             (apk_id, body)
-            VALUES('{0}', '{1}')
-        '''.format(apk_id, namespace))
+            VALUES(?, ?)
+        ''', (apk_id, namespace))
 
     cur.close()
 
@@ -99,8 +100,8 @@ def insert_apk(config, match):
     cur.execute('''
     INSERT INTO apks
         (id, date, filename)
-        VALUES('{0}', '{1}', '{2}')
-    '''.format(match.group(1), match.group(3), match.group(0)))
+        VALUES(?, ?, ?)
+    ''', (match.group(1), match.group(3), match.group(0)))
 
     cur.close()
 
